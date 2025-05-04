@@ -16,10 +16,21 @@ const bot = mineflayer.createBot({
   password: '12345678',
 });
 
+// Login automatizado quando o bot se conecta ao servidor
+bot.on('spawn', () => {
+  console.log('Bot entrou no servidor');
+
+  // Se o servidor tiver um sistema de login, enviar o comando de login
+  // O servidor pode exigir o login em formato específico, como:
+  // bot.chat('/login 12345678') - Isso pode variar dependendo do servidor
+  bot.chat('/login 12345678');  // Alterar conforme o formato de comando do servidor
+  bot.chat('CHEGUEI RAPAZIADA!');  // Alterar conforme o formato de comando do servidor
+});
+
+// Função para bot dormir
 let botSleeping = false;
 let homeCoordinates = { x: 100, y: 64, z: 100 }; // Coordenadas específicas
 
-// Função para bot dormir
 function botSleep() {
   if (botSleeping) return;
 
@@ -56,7 +67,7 @@ function botWakeUp() {
   console.log("Bot acordou e agora está indo para as coordenadas.");
 
   bot.moveTo(homeCoordinates).then(() => {
-    bot.chat("Cheguei no meu ponto de descanso!");
+    bot.chat("Cheguei no trabalho!");
     console.log("Bot chegou nas coordenadas.");
   }).catch((err) => {
     console.log("Erro ao mover para o ponto de descanso: ", err);
