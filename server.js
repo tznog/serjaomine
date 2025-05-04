@@ -1,16 +1,21 @@
+const express = require('express');
+const path = require('path');
+const app = express();
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
 const mineflayer = require('mineflayer');
 
 const bot = mineflayer.createBot({
-  host: process.env.MINECRAFT_SERVER,
+  host: 'survival.406rec.com',  // Seu IP do servidor
   port: 25565,
-  username: process.env.BOT_NAME,
-  password: process.env.BOT_PASSWORD,
+  username: 'SerjaoBot',
+  password: '12345678',
 });
 
 let botSleeping = false;
-let homeCoordinates = { x: 100, y: 64, z: 100 }; // Coordenadas para o bot voltar após dormir
+let homeCoordinates = { x: 100, y: 64, z: 100 };
 
-// Função para bot dormir na cama
+// Funções para o bot dormir e acordar
 function botSleep() {
   if (botSleeping) return;
 
@@ -18,7 +23,6 @@ function botSleep() {
   bot.chat("Vou dormir agora...");
   console.log("Bot está indo dormir...");
 
-  // Procurando uma cama perto do bot
   const bed = bot.findBlock({
     matching: 0x04, // ID da cama
     maxDistance: 10
@@ -39,7 +43,6 @@ function botSleep() {
   }
 }
 
-// Função para o bot acordar e voltar para coordenadas específicas
 function botWakeUp() {
   if (!botSleeping) return;
 
@@ -55,20 +58,36 @@ function botWakeUp() {
   });
 }
 
-// Comando no chat
-bot.on('chat', (username, message) => {
-  if (message === 'dormir' && !botSleeping) {
-    botSleep();
-  }
+// Websocket para enviar comandos
+io.on('connection', (socket) => {
+  console.log('Novo usuário conectado.');
 
-  if (message === 'acordar' && botSleeping) {
-    botWakeUp();
-  }
+  socket.on('command', (command) => {
+    if (command === 'dormir' && !botSleeping) {
+      botSleep();
+    }
 
-  // Outros comandos podem ser adicionados aqui
+    if (command === 'acordar' && botSleeping) {
+      botWakeUp();
+    }
+
+    socket.emit('botChat', `Comando "${command}" executado.`);
+  });
+
+  bot.on('chat', (username, message) => {
+    socket.emit('botChat', `${username}: ${message}`);
+  });
 });
 
-// Bot logando e se conectando ao servidor
-bot.on('spawn', () => {
-  console.log(`${bot.username} está online no servidor!`);
+// Servindo arquivos estáticos
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Inicializa o servidor
+const port = 3000;
+http.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });
