@@ -25,6 +25,7 @@ function createBot() {
   bot.once('spawn', () => {
     console.log('✅ Bot entrou no servidor!');
     bot.chat('/login 12345678');
+    bot.chat('CHEGUEI RAPAZIADA!');
   });
 
   bot.on('chat', (username, message) => {
