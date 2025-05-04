@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chat do Bot Serjao</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; }
+    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+    input, button { padding: 10px; font-size: 16px; }
+    input { width: 75%; }
+    button { width: 20%; }
+  </style>
+</head>
+<body>
+  <h2>Chat com o Serjao no Minecraft</h2>
+  <div id="chat"></div>
+  <input id="message" placeholder="Digite sua mensagem" />
+  <button onclick="sendMessage()">Enviar</button>
+
+  <script>
+    const socket = io();
+    const chat = document.getElementById('chat');
+
+    socket.on('chat', data => {
+      const line = document.createElement('div');
+      line.textContent = `${data.username}: ${data.message}`;
+      chat.appendChild(line);
+      chat.scrollTop = chat.scrollHeight;
+    });
+
+    function sendMessage() {
+      const input = document.getElementById('message');
+      const msg = input.value.trim();
+      if (msg) {
+        socket.emit('send-message', msg);
+        const line = document.createElement('div');
+        line.textContent = `Você: ${msg}`;
+        chat.appendChild(line);
+        input.value = '';
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+  </script>
+</body>
+</html>
