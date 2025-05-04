@@ -1,21 +1,25 @@
 const express = require('express');
 const path = require('path');
-const app = express();
-const http = require('http').Server(app);
-const io = require('socket.io')(http);
 const mineflayer = require('mineflayer');
+const http = require('http');
+const socketIo = require('socket.io');
 
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+// Criar o bot
 const bot = mineflayer.createBot({
-  host: 'survival.406rec.com',  // Seu IP do servidor
+  host: 'survival.406rec.com',  // IP do servidor Minecraft
   port: 25565,
   username: 'SerjaoBot',
   password: '12345678',
 });
 
 let botSleeping = false;
-let homeCoordinates = { x: 736, y: 191, z: 2963 };
+let homeCoordinates = { x: 100, y: 64, z: 100 }; // Coordenadas específicas
 
-// Funções para o bot dormir e acordar
+// Função para bot dormir
 function botSleep() {
   if (botSleeping) return;
 
@@ -43,22 +47,31 @@ function botSleep() {
   }
 }
 
+// Função para o bot acordar e ir para as coordenadas
 function botWakeUp() {
   if (!botSleeping) return;
 
   botSleeping = false;
   bot.chat("Estou acordando...");
-  console.log("Bot acordou e agora está indo para as coordenadas específicas.");
+  console.log("Bot acordou e agora está indo para as coordenadas.");
 
   bot.moveTo(homeCoordinates).then(() => {
     bot.chat("Cheguei no meu ponto de descanso!");
-    console.log("Bot chegou nas coordenadas especificadas.");
+    console.log("Bot chegou nas coordenadas.");
   }).catch((err) => {
     console.log("Erro ao mover para o ponto de descanso: ", err);
   });
 }
 
-// Websocket para enviar comandos
+// Servir arquivos estáticos (frontend)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Rota para a página principal
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// WebSocket para interação com o frontend
 io.on('connection', (socket) => {
   console.log('Novo usuário conectado.');
 
@@ -74,20 +87,14 @@ io.on('connection', (socket) => {
     socket.emit('botChat', `Comando "${command}" executado.`);
   });
 
+  // Enviar mensagens do bot para o frontend
   bot.on('chat', (username, message) => {
     socket.emit('botChat', `${username}: ${message}`);
   });
 });
 
-// Servindo arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Inicializa o servidor
+// Iniciar o servidor na porta 3000
 const port = 3000;
-http.listen(port, () => {
+server.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
