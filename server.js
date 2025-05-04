@@ -26,22 +26,32 @@ const bot = mineflayer.createBot({
   password: '12345678',         // Senha do bot
 });
 
+// Variável para verificar se o bot foi responsável pela mensagem
+let isBotMessage = false;
+
 // Quando o bot se conectar com sucesso ao servidor
 bot.once('spawn', () => {
   console.log('Bot Serjao conectado ao servidor Minecraft com sucesso!');
   // O bot envia o comando de login ao entrar
   bot.chat('/login 12345678');
   // Avisar no chat do servidor quando o bot entra
-  bot.chat('Cheguei rapaziada!');
+  bot.chat('Bot Serjao entrou no servidor!');
   // Emitir uma mensagem de boas-vindas para o chat do site
   io.emit('chat', { username: 'Serjao', message: 'Bot Serjao entrou no servidor!' });
 });
 
 // Quando o bot recebe uma mensagem no chat do Minecraft
 bot.on('chat', (username, message) => {
+  if (username === 'Serjao') {
+    isBotMessage = true;  // Marcar que a mensagem é do bot
+    return;  // Ignorar mensagens do bot
+  }
   console.log(`${username}: ${message}`);
-  // Emitir a mensagem de chat para o site
-  io.emit('chat', { username, message });
+  // Emitir a mensagem de chat para o site apenas se não for do bot
+  if (!isBotMessage) {
+    io.emit('chat', { username, message });
+  }
+  isBotMessage = false;  // Resetar a flag após o envio
 });
 
 // Endereço de API para enviar mensagens ao Minecraft
