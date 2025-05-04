@@ -1,87 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel Serjão</title>
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #121212;
-      color: #e0e0e0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .container {
-      width: 80%;
-      max-width: 600px;
-      background-color: #1e1e1e;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    }
-    h1 {
-      text-align: center;
-      color: #ff9800;
-      font-size: 24px;
-    }
-    #chatBox {
-      height: 300px;
-      overflow-y: scroll;
-      background-color: #333;
-      border: 1px solid #444;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 5px;
-      color: #fff;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #444;
-      background-color: #222;
-      color: #fff;
-    }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #ff9800;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Serjão</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
 </head>
-<body>
+<body class="dark-theme">
+    <div class="container">
+        <h1>Chat de Controle do Serjão</h1>
+        
+        <!-- Chat Section -->
+        <div class="chat-box">
+            <div id="chatOutput" class="output"></div>
+            <input type="text" id="chatInput" placeholder="Digite uma mensagem" />
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
 
-  <div class="container">
-    <h1>Chat de Controle do Serjão</h1>
-    <div id="chatBox"></div>
-    <input id="commandInput" type="text" placeholder="Digite um comando ou interaja no chat (dormir/acordar)...">
-  </div>
+        <!-- Command Section -->
+        <div class="command-box">
+            <div id="commandOutput" class="output"></div>
+            <input type="text" id="commandInput" placeholder="Digite um comando para o bot" />
+            <button onclick="sendCommand()">Executar Comando</button>
+        </div>
+    </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    var socket = io();
-    var commandInput = document.getElementById('commandInput');
-    var chatBox = document.getElementById('chatBox');
+    <script>
+        var socket = io();
 
-    socket.on('botChat', function(message) {
-      var messageElem = document.createElement('div');
-      messageElem.textContent = message;
-      chatBox.appendChild(messageElem);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+        // Função para enviar mensagens do chat
+        function sendMessage() {
+            var message = document.getElementById('chatInput').value;
+            if (message) {
+                socket.emit('chatMessage', message);
+                document.getElementById('chatInput').value = '';
+            }
+        }
 
-    commandInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        socket.emit('command', commandInput.value);
-        commandInput.value = '';
-      }
-    });
-  </script>
+        // Função para enviar comandos do bot
+        function sendCommand() {
+            var command = document.getElementById('commandInput').value;
+            if (command) {
+                socket.emit('botCommand', command);
+                document.getElementById('commandInput').value = '';
+            }
+        }
+
+        // Recebe mensagens do chat
+        socket.on('chatMessage', function(message) {
+            var chatOutput = document.getElementById('chatOutput');
+            chatOutput.innerHTML += `<p>${message}</p>`;
+        });
+
+        // Recebe respostas dos comandos
+        socket.on('botCommandResponse', function(response) {
+            var commandOutput = document.getElementById('commandOutput');
+            commandOutput.innerHTML += `<p>${response}</p>`;
+        });
+    </script>
 </body>
 </html>
