@@ -2,8 +2,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mineflayer = require('mineflayer');
 const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 const port = process.env.PORT || 3000;
 
 // Configuração do Express para lidar com requisições JSON
@@ -11,7 +15,7 @@ app.use(bodyParser.json());
 
 // Servir o arquivo index.html na rota principal
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));  // Caminho correto para a pasta 'public'
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Criação do bot "Serjao"
@@ -25,6 +29,17 @@ const bot = mineflayer.createBot({
 // Quando o bot se conectar com sucesso ao servidor
 bot.once('spawn', () => {
   console.log('Bot Serjao conectado ao servidor Minecraft com sucesso!');
+  // Avisar no chat do servidor quando o bot entra
+  bot.chat('Bot Serjao entrou no servidor!');
+  // Emitir uma mensagem de boas-vindas para o chat do site
+  io.emit('chat', { username: 'Bot Serjao', message: 'Bot Serjao entrou no servidor!' });
+});
+
+// Quando o bot recebe uma mensagem no chat do Minecraft
+bot.on('chat', (username, message) => {
+  console.log(`${username}: ${message}`);
+  // Emitir a mensagem de chat para o site
+  io.emit('chat', { username, message });
 });
 
 // Endereço de API para enviar mensagens ao Minecraft
@@ -45,6 +60,6 @@ app.post('/send-message', (req, res) => {
 });
 
 // Iniciar o servidor Express
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Servidor Express rodando na porta ${port}`);
 });
