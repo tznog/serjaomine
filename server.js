@@ -13,7 +13,7 @@ const bot = mineflayer.createBot({
 });
 
 let botSleeping = false;
-let homeCoordinates = { x: 100, y: 64, z: 100 };
+let homeCoordinates = { x: 736, y: 191, z: 2963 };
 
 // Funções para o bot dormir e acordar
 function botSleep() {
