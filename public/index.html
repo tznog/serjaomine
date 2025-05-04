@@ -1,29 +1,66 @@
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Painel Serjão</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <h1>Controle do Serjão</h1>
-
+    
     <div class="chat-box" id="chat"></div>
 
+    <!-- Formulário de chat -->
     <form id="chat-form">
-      <input type="text" id="chat-input" placeholder="Digite sua mensagem para o chat..." autocomplete="off" required />
+      <input type="text" id="chat-input" placeholder="Mensagem no chat do Minecraft..." />
       <button type="submit">Enviar</button>
     </form>
 
+    <!-- Formulário de comandos -->
     <form id="command-form">
-      <input type="text" id="command-input" placeholder="Digite um comando para o bot..." autocomplete="off" required />
+      <input type="text" id="command-input" placeholder="Comando especial (ex: /dormir)" />
       <button type="submit">Executar</button>
     </form>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/script.js"></script>
+  <script>
+    const socket = io();
+
+    const chatBox = document.getElementById("chat");
+    const chatForm = document.getElementById("chat-form");
+    const chatInput = document.getElementById("chat-input");
+
+    const commandForm = document.getElementById("command-form");
+    const commandInput = document.getElementById("command-input");
+
+    chatForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const message = chatInput.value;
+      if (message.trim() !== "") {
+        socket.emit("chatMessage", message);
+        chatInput.value = "";
+      }
+    });
+
+    commandForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const command = commandInput.value;
+      if (command.trim() !== "") {
+        socket.emit("botCommand", command);
+        commandInput.value = "";
+      }
+    });
+
+    socket.on("chatMessage", (msg) => {
+      const el = document.createElement("div");
+      el.textContent = msg;
+      chatBox.appendChild(el);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  </script>
 </body>
 </html>
