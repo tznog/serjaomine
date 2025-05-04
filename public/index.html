@@ -80,7 +80,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Controle do Serjão</h1>
+    <h1>Chat do Serjão</h1>
     <div id="chat" class="chat-box"></div>
     <form onsubmit="sendMessage(event)">
       <input id="message" type="text" placeholder="Digite sua mensagem" required />
@@ -107,7 +107,7 @@
       if (message) {
         // Enviar a mensagem para o servidor
         socket.emit('send-message', message);
-        // Exibir a mensagem no chat do site
+        // Exibir a mensagem no chat do site como Serjao
         const messageLine = document.createElement('div');
         messageLine.textContent = `Você: ${message}`;
         chatBox.appendChild(messageLine);
