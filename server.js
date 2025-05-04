@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 
 // Servir o arquivo index.html na rota principal
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));  // Caminho correto para a pasta 'public'
 });
 
 // Criação do bot "Serjao"
