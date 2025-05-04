@@ -1,56 +1,74 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const mineflayer = require('mineflayer');
-const path = require('path');
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const bot = mineflayer.createBot({
+  host: process.env.MINECRAFT_SERVER,
+  port: 25565,
+  username: process.env.BOT_NAME,
+  password: process.env.BOT_PASSWORD,
+});
 
-const PORT = process.env.PORT || 3000;
+let botSleeping = false;
+let homeCoordinates = { x: 100, y: 64, z: 100 }; // Coordenadas para o bot voltar após dormir
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Função para bot dormir na cama
+function botSleep() {
+  if (botSleeping) return;
 
-let bot;
+  botSleeping = true;
+  bot.chat("Vou dormir agora...");
+  console.log("Bot está indo dormir...");
 
-function createBot() {
-  bot = mineflayer.createBot({
-    host: 'survival.406rec.com',
-    port: 25565,
-    username: 'Serjao',
-    version: '1.21'
+  // Procurando uma cama perto do bot
+  const bed = bot.findBlock({
+    matching: 0x04, // ID da cama
+    maxDistance: 10
   });
 
-  bot.once('spawn', () => {
-    console.log('✅ Bot entrou no servidor!');
-    bot.chat('/login 12345678');
-  });
+  if (bed) {
+    bot.sleep(bed)
+      .then(() => {
+        console.log("Bot está dormindo...");
+        bot.chat("Estou dormindo na cama.");
+      })
+      .catch((err) => {
+        console.log("Erro ao dormir: ", err);
+      });
+  } else {
+    bot.chat("Não encontrei uma cama!");
+    console.log("Bot não encontrou cama!");
+  }
+}
 
-  bot.on('chat', (username, message) => {
-    if (username !== bot.username) {
-      io.emit('chat', { username, message });
-    }
-  });
+// Função para o bot acordar e voltar para coordenadas específicas
+function botWakeUp() {
+  if (!botSleeping) return;
 
-  bot.on('end', () => {
-    console.log('⚠️ Bot caiu. Reconectando em 5s...');
-    setTimeout(createBot, 5000);
-  });
+  botSleeping = false;
+  bot.chat("Estou acordando...");
+  console.log("Bot acordou e agora está indo para as coordenadas específicas.");
 
-  bot.on('error', (err) => {
-    console.error('❌ Erro no bot:', err.message);
+  bot.moveTo(homeCoordinates).then(() => {
+    bot.chat("Cheguei no meu ponto de descanso!");
+    console.log("Bot chegou nas coordenadas especificadas.");
+  }).catch((err) => {
+    console.log("Erro ao mover para o ponto de descanso: ", err);
   });
 }
 
-createBot();
+// Comando no chat
+bot.on('chat', (username, message) => {
+  if (message === 'dormir' && !botSleeping) {
+    botSleep();
+  }
 
-io.on('connection', (socket) => {
-  socket.on('send-message', (msg) => {
-    if (bot && bot.chat) bot.chat(msg);
-  });
+  if (message === 'acordar' && botSleeping) {
+    botWakeUp();
+  }
+
+  // Outros comandos podem ser adicionados aqui
 });
 
-server.listen(PORT, () => {
-  console.log(`🌐 Servidor web escutando na porta ${PORT}`);
+// Bot logando e se conectando ao servidor
+bot.on('spawn', () => {
+  console.log(`${bot.username} está online no servidor!`);
 });
