@@ -1,111 +1,113 @@
+// server.js
 const express = require('express');
-const path = require('path');
-const mineflayer = require('mineflayer');
 const http = require('http');
-const socketIo = require('socket.io');
+const path = require('path');
+const { Server } = require('socket.io');
+const mineflayer = require('mineflayer');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server);
 
-// Criar o bot
-const bot = mineflayer.createBot({
-  host: 'survival.406rec.com',  // IP do servidor Minecraft
-  port: 25565,
-  username: 'Serjao',
-  password: '12345678',
-});
+const PORT = process.env.PORT || 3000;
 
-// Login automatizado quando o bot se conecta ao servidor
-bot.on('spawn', () => {
-  console.log('Bot entrou no servidor');
-
-  // Se o servidor tiver um sistema de login, enviar o comando de login
-  // O servidor pode exigir o login em formato específico, como:
-  // bot.chat('/login 12345678') - Isso pode variar dependendo do servidor
-  bot.chat('/login 12345678');  // Alterar conforme o formato de comando do servidor
-  bot.chat('CHEGUEI RAPAZIADA!');  // Alterar conforme o formato de comando do servidor
-});
-
-// Função para bot dormir
-let botSleeping = false;
-let homeCoordinates = { x: 100, y: 64, z: 100 }; // Coordenadas específicas
-
-function botSleep() {
-  if (botSleeping) return;
-
-  botSleeping = true;
-  bot.chat("Vou dormir agora...");
-  console.log("Bot está indo dormir...");
-
-  const bed = bot.findBlock({
-    matching: 0x04, // ID da cama
-    maxDistance: 10
-  });
-
-  if (bed) {
-    bot.sleep(bed)
-      .then(() => {
-        console.log("Bot está dormindo...");
-        bot.chat("Estou dormindo na cama.");
-      })
-      .catch((err) => {
-        console.log("Erro ao dormir: ", err);
-      });
-  } else {
-    bot.chat("Não encontrei uma cama!");
-    console.log("Bot não encontrou cama!");
-  }
-}
-
-// Função para o bot acordar e ir para as coordenadas
-function botWakeUp() {
-  if (!botSleeping) return;
-
-  botSleeping = false;
-  bot.chat("Estou acordando...");
-  console.log("Bot acordou e agora está indo para as coordenadas.");
-
-  bot.moveTo(homeCoordinates).then(() => {
-    bot.chat("Cheguei no trabalho!");
-    console.log("Bot chegou nas coordenadas.");
-  }).catch((err) => {
-    console.log("Erro ao mover para o ponto de descanso: ", err);
-  });
-}
-
-// Servir arquivos estáticos (frontend)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rota para a página principal
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// WebSocket para interação com o frontend
-io.on('connection', (socket) => {
-  console.log('Novo usuário conectado.');
+let bot;
+const homeCoordinates = { x: 763, y: 191, z: 2963 }; // Ajuste conforme necessário
 
-  socket.on('command', (command) => {
-    if (command === 'dormir' && !botSleeping) {
-      botSleep();
-    }
-
-    if (command === 'acordar' && botSleeping) {
-      botWakeUp();
-    }
-
-    socket.emit('botChat', `Comando "${command}" executado.`);
+function createBot() {
+  bot = mineflayer.createBot({
+    host: 'survival.406rec.com',
+    port: 25565,
+    username: 'Serjao',
+    version: '1.21.4',
   });
 
-  // Enviar mensagens do bot para o frontend
+  bot.on('login', () => {
+    console.log('Bot conectado!');
+    bot.chat('/login 12345678');
+  });
+
   bot.on('chat', (username, message) => {
-    socket.emit('botChat', `${username}: ${message}`);
+    if (username === bot.username) return;
+    io.emit('chat', `${username}: ${message}`);
+  });
+
+  bot.on('message', (jsonMsg) => {
+    const msg = jsonMsg.toString();
+    io.emit('chat', `§r${msg}`);
+  });
+
+  bot.on('end', () => {
+    console.log('Bot desconectado, tentando reconectar em 10s...');
+    setTimeout(createBot, 10000);
+  });
+
+  bot.on('error', err => {
+    console.error('Erro do bot:', err);
+  });
+}
+
+createBot();
+
+function botSleep() {
+  const bed = bot.findBlock({ matching: block => bot.isABed(block) });
+  if (!bed) {
+    bot.chat('Não encontrei nenhuma cama por perto!');
+    return;
+  }
+  bot.chat('Indo dormir...');
+  bot.sleep(bed, (err) => {
+    if (err) {
+      bot.chat('Erro ao tentar dormir: ' + err.message);
+    } else {
+      bot.chat('Boa noite! 😴');
+    }
+  });
+}
+
+function botWakeUp() {
+  if (!bot.isSleeping) {
+    bot.chat('Eu nem estou dormindo...');
+    return;
+  }
+  bot.chat('Acordando! ☀️');
+  bot.wake((err) => {
+    if (err) {
+      bot.chat('Erro ao acordar: ' + err.message);
+    } else {
+      bot.chat('Bom dia! Voltando para casa...');
+      bot.chat(`/tp ${homeCoordinates.x} ${homeCoordinates.y} ${homeCoordinates.z}`);
+    }
+  });
+}
+
+io.on('connection', (socket) => {
+  console.log('Cliente conectado');
+
+  socket.on('sendChat', (msg) => {
+    if (bot && bot.chat) {
+      bot.chat(msg);
+    }
+  });
+
+  socket.on('sendCommand', (cmd) => {
+    if (!bot) return;
+    if (cmd === 'sleep') {
+      botSleep();
+    } else if (cmd === 'wake') {
+      botWakeUp();
+    } else {
+      bot.chat(cmd);
+    }
   });
 });
 
-// Iniciar o servidor na porta 3000
-const port = 3000;
-server.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
+server.listen(PORT, () => {
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
