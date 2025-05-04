@@ -3,79 +3,77 @@ const bodyParser = require('body-parser');
 const mineflayer = require('mineflayer');
 const path = require('path');
 const http = require('http');
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 const port = process.env.PORT || 3000;
 
+// Configuração do Express para lidar com requisições JSON
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
+// Servir o arquivo index.html na rota principal
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Função para criar o bot
 let bot;
 
 function createBot() {
   bot = mineflayer.createBot({
-    host: 'survival.406rec.com',
-    port: 25565,
-    username: 'Serjao',
-    password: '12345678',
-    // version: '1.20.4' // Adicione aqui se souber a versão exata do servidor
+    host: 'survival.406rec.com',  // IP do servidor Minecraft
+    port: 25565,                  // Porta padrão do Minecraft
+    username: 'Serjao',           // Nome do bot
+    password: '12345678',         // Senha do bot
   });
 
   bot.once('spawn', () => {
-    console.log('Bot Serjao conectado ao servidor Minecraft com sucesso!');
-    bot.chat('/login 12345678');
-    bot.chat('O Serjão está online!');
+    console.log('✅ Bot Serjão conectado ao servidor Minecraft com sucesso!');
+    bot.chat('/login 12345678'); // Comando de login do bot
   });
 
-  // Captura mensagens do chat dos jogadores
+  // Captura as mensagens do chat do servidor Minecraft
   bot.on('chat', (username, message) => {
-    if (username === bot.username) return; // Ignora mensagens duplicadas
-    io.emit('chat message', `${username}: ${message}`);
+    if (username === bot.username) return;  // Ignora mensagens do próprio bot
+    console.log(`${username}: ${message}`);
+    io.emit('chat', { username, message });  // Envia para o cliente do site
   });
 
-  // Tratamento de erro para evitar que o bot derrube o servidor
-  bot.on('error', (err) => {
-    console.error('Erro no bot:', err);
-  });
-
+  // Reconexão automática se o bot se desconectar
   bot.on('end', () => {
-    console.warn('Bot foi desconectado. Tentando reconectar em 10 segundos...');
-    setTimeout(createBot, 10000); // Reconecta após 10 segundos
+    console.log('🔁 Bot desconectado. Tentando reconectar em 5 segundos...');
+    setTimeout(createBot, 5000);  // Recria o bot após 5 segundos
+  });
+
+  // Captura erros do bot
+  bot.on('error', (err) => {
+    console.log('❌ Erro no bot:', err.code || err.message);
   });
 }
 
-// Cria o bot inicialmente
+// Cria o bot na inicialização do servidor
 createBot();
 
-// Rota para envio de mensagens do site
+// Endereço de API para enviar mensagens ao Minecraft
 app.post('/send-message', (req, res) => {
   const { message } = req.body;
 
-  if (!message || !bot) {
-    return res.status(400).send({ error: 'Mensagem inválida ou bot desconectado.' });
+  // Verificação se a mensagem existe
+  if (!message) {
+    return res.status(400).send({ error: 'Mensagem inválida' });
   }
 
+  // Enviar a mensagem para o Minecraft
   bot.chat(message);
-  io.emit('chat message', `Serjao: ${message}`);
+  console.log(`Mensagem enviada para Minecraft: ${message}`);
+
+  // Retorno de sucesso
   return res.status(200).send({ message: 'Mensagem enviada!' });
 });
 
-// Comunicação com o front-end via WebSocket
-io.on('connection', (socket) => {
-  console.log('Usuário conectado ao chat');
-
-  socket.on('disconnect', () => {
-    console.log('Usuário desconectado do chat');
-  });
-});
-
+// Configuração do servidor HTTP para trabalhar com o Socket.io
 server.listen(port, () => {
   console.log(`Servidor Express rodando na porta ${port}`);
 });
