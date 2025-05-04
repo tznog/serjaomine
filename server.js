@@ -12,7 +12,7 @@ const io = socketIo(server);
 const bot = mineflayer.createBot({
   host: 'survival.406rec.com',  // IP do servidor Minecraft
   port: 25565,
-  username: 'SerjaoBot',
+  username: 'Serjao',
   password: '12345678',
 });
 
