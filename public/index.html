@@ -1,46 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Chat do Bot Serjao</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bot Minecraft - Controle</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; }
-    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
-    input, button { padding: 10px; font-size: 16px; }
-    input { width: 75%; }
-    button { width: 20%; }
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #121212;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      width: 80%;
+      max-width: 600px;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+    h1 {
+      text-align: center;
+      color: #ff9800;
+      font-size: 24px;
+    }
+    #chatBox {
+      height: 300px;
+      overflow-y: scroll;
+      background-color: #333;
+      border: 1px solid #444;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      color: #fff;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #444;
+      background-color: #222;
+      color: #fff;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #ff9800;
+    }
   </style>
 </head>
 <body>
-  <h2>Chat com o Serjao no Minecraft</h2>
-  <div id="chat"></div>
-  <input id="message" placeholder="Digite sua mensagem" />
-  <button onclick="sendMessage()">Enviar</button>
 
+  <div class="container">
+    <h1>Controle do Bot Minecraft</h1>
+    <div id="chatBox"></div>
+    <input id="commandInput" type="text" placeholder="Digite um comando (dormir/acordar)...">
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
-    const chat = document.getElementById('chat');
+    var socket = io();
+    var commandInput = document.getElementById('commandInput');
+    var chatBox = document.getElementById('chatBox');
 
-    socket.on('chat', data => {
-      const line = document.createElement('div');
-      line.textContent = `${data.username}: ${data.message}`;
-      chat.appendChild(line);
-      chat.scrollTop = chat.scrollHeight;
+    socket.on('botChat', function(message) {
+      var messageElem = document.createElement('div');
+      messageElem.textContent = message;
+      chatBox.appendChild(messageElem);
+      chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    function sendMessage() {
-      const input = document.getElementById('message');
-      const msg = input.value.trim();
-      if (msg) {
-        socket.emit('send-message', msg);
-        const line = document.createElement('div');
-        line.textContent = `Você: ${msg}`;
-        chat.appendChild(line);
-        input.value = '';
-        chat.scrollTop = chat.scrollHeight;
+    commandInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        socket.emit('command', commandInput.value);
+        commandInput.value = '';
       }
-    }
+    });
   </script>
 </body>
 </html>
