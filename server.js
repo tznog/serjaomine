@@ -29,10 +29,12 @@ const bot = mineflayer.createBot({
 // Quando o bot se conectar com sucesso ao servidor
 bot.once('spawn', () => {
   console.log('Bot Serjao conectado ao servidor Minecraft com sucesso!');
+  // O bot envia o comando de login ao entrar
+  bot.chat('/login 12345678');
   // Avisar no chat do servidor quando o bot entra
-  bot.chat('Bot Serjao entrou no servidor!');
+  bot.chat('Cheguei rapaziada!');
   // Emitir uma mensagem de boas-vindas para o chat do site
-  io.emit('chat', { username: 'Bot Serjao', message: 'Bot Serjao entrou no servidor!' });
+  io.emit('chat', { username: 'Serjao', message: 'Bot Serjao entrou no servidor!' });
 });
 
 // Quando o bot recebe uma mensagem no chat do Minecraft
@@ -45,18 +47,36 @@ bot.on('chat', (username, message) => {
 // Endereço de API para enviar mensagens ao Minecraft
 app.post('/send-message', (req, res) => {
   const { message } = req.body;
-  
+
   // Verificação se a mensagem existe
   if (!message) {
     return res.status(400).send({ error: 'Mensagem inválida' });
   }
 
-  // Enviar a mensagem para o Minecraft
+  // Enviar a mensagem para o Minecraft (o bot vai "digitar" a mensagem no chat do jogo)
   bot.chat(message);
   console.log(`Mensagem enviada para Minecraft: ${message}`);
 
   // Retorno de sucesso
   return res.status(200).send({ message: 'Mensagem enviada!' });
+});
+
+// Ouvir o Socket.io para mensagens vindas do front-end (site)
+io.on('connection', (socket) => {
+  console.log('Novo cliente conectado ao chat');
+
+  // Quando o site envia uma mensagem, o bot digita no chat do Minecraft
+  socket.on('send-message', (message) => {
+    console.log(`Mensagem recebida do site: ${message}`);
+    // Enviar a mensagem para o bot (o bot vai "digitar" a mensagem no chat do jogo)
+    bot.chat(message);
+    // Emitir a mensagem para o chat do site (mostrando a mensagem enviada)
+    io.emit('chat', { username: 'Você', message });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Cliente desconectado');
+  });
 });
 
 // Iniciar o servidor Express
