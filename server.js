@@ -1,49 +1,50 @@
-const mineflayer = require('mineflayer');
 const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
+const bodyParser = require('body-parser');
+const mineflayer = require('mineflayer');
+const path = require('path');
 
-// Criação do servidor HTTP e WebSocket
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
+const port = process.env.PORT || 3000;
 
-// Configurações do bot
+// Configuração do Express para lidar com requisições JSON
+app.use(bodyParser.json());
+
+// Servir o arquivo index.html na rota principal
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Criação do bot "Serjao"
 const bot = mineflayer.createBot({
-  host: 'survival.406rec.com', // Endereço do servidor Minecraft
-  port: 25565, // Porta do servidor Minecraft
-  username: 'Serjao', // Nome do bot
-  version: '1.21', // Versão do Minecraft
+  host: 'survival.406rec.com',  // IP do servidor Minecraft
+  port: 25565,                  // Porta padrão do Minecraft
+  username: 'Serjao',           // Nome do bot
+  password: '12345678',         // Senha do bot
 });
 
-// Servindo o front-end
-app.use(express.static('public'));
-
-// Conexão do socket.io
-io.on('connection', socket => {
-  console.log('Usuário conectado');
-
-  // Enviar mensagens do chat do Minecraft para o cliente
-  bot.on('chat', (username, message) => {
-    // Envia a mensagem do chat do Minecraft para o frontend
-    socket.emit('chat', { username, message });
-  });
-
-  // Quando o cliente enviar uma mensagem
-  socket.on('send-message', (message) => {
-    bot.chat(message); // Envia a mensagem para o chat do Minecraft
-  });
-});
-
-// Comando de login no servidor Minecraft
+// Quando o bot se conectar com sucesso ao servidor
 bot.once('spawn', () => {
-  bot.chat('/login 12345678'); // Envia o comando de login no chat do Minecraft
-
-  // Enviar uma mensagem de aviso quando o bot entrar no servidor
-  bot.chat('Cheguei rapaziada!');
+  console.log('Bot Serjao conectado ao servidor Minecraft com sucesso!');
 });
 
-// Iniciar o servidor na porta 3000
-server.listen(3000, () => {
-  console.log('Servidor rodando na porta 3000');
+// Endereço de API para enviar mensagens ao Minecraft
+app.post('/send-message', (req, res) => {
+  const { message } = req.body;
+  
+  // Verificação se a mensagem existe
+  if (!message) {
+    return res.status(400).send({ error: 'Mensagem inválida' });
+  }
+
+  // Enviar a mensagem para o Minecraft
+  bot.chat(message);
+  console.log(`Mensagem enviada para Minecraft: ${message}`);
+
+  // Retorno de sucesso
+  return res.status(200).send({ message: 'Mensagem enviada!' });
+});
+
+// Iniciar o servidor Express
+app.listen(port, () => {
+  console.log(`Servidor Express rodando na porta ${port}`);
 });
