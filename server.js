@@ -13,10 +13,8 @@ const port = process.env.PORT || 3000;
 // Configuração do Express para lidar com requisições JSON
 app.use(bodyParser.json());
 
-// Servir o arquivo index.html na rota principal
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Servindo o front-end
+app.use(express.static('public'));
 
 // Função para criar o bot
 let bot;
