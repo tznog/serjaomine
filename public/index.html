@@ -1,41 +1,64 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chat do Serjão</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat com Serjão</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    #messages {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    #inputMessage {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Chat do Serjão</h1>
-    <div class="chat-box" id="chat"></div>
-    <form onsubmit="event.preventDefault(); sendMessage();">
-      <input type="text" id="message" placeholder="Digite sua mensagem..." autocomplete="off" />
-      <button type="submit">Enviar</button>
-    </form>
-  </div>
-
+  <h1>Chat com o Bot Serjão</h1>
+  <div id="messages"></div>
+  <textarea id="inputMessage" placeholder="Digite sua mensagem..."></textarea>
+  
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    // Conexão com o servidor Socket.io
     const socket = io();
-    const chat = document.getElementById('chat');
 
-    socket.on('chat', ({ username, message }) => {
-      const line = document.createElement('div');
-      line.textContent = `${username}: ${message}`;
-      chat.appendChild(line);
-      chat.scrollTop = chat.scrollHeight;
+    // Função para adicionar mensagens ao chat
+    function addMessage(username, message) {
+      const messages = document.getElementById('messages');
+      const messageElement = document.createElement('div');
+      messageElement.textContent = `${username}: ${message}`;
+      messages.appendChild(messageElement);
+      messages.scrollTop = messages.scrollHeight; // Rolagem automática para a última mensagem
+    }
+
+    // Recebe mensagens do servidor e exibe no chat
+    socket.on('chat', (data) => {
+      addMessage(data.username, data.message);
     });
 
-    function sendMessage() {
-      const input = document.getElementById('message');
-      const msg = input.value.trim();
-      if (msg) {
-        socket.emit('send-message', msg);
-        input.value = '';
+    // Envia a mensagem quando pressionar Enter
+    document.getElementById('inputMessage').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const message = e.target.value;
+        if (message.trim() !== '') {
+          socket.emit('send-message', message); // Envia para o servidor
+          e.target.value = ''; // Limpa o campo de texto
+        }
       }
-    }
+    });
   </script>
 </body>
 </html>
