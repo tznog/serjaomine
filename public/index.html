@@ -109,7 +109,6 @@
         socket.emit('send-message', message);
         // Exibir a mensagem no chat do site como Serjao
         const messageLine = document.createElement('div');
-        messageLine.textContent = `Você: ${message}`;
         chatBox.appendChild(messageLine);
         messageInput.value = '';
         chatBox.scrollTop = chatBox.scrollHeight;
