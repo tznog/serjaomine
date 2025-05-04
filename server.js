@@ -70,8 +70,8 @@ io.on('connection', (socket) => {
     console.log(`Mensagem recebida do site: ${message}`);
     // Enviar a mensagem para o bot (o bot vai "digitar" a mensagem no chat do jogo)
     bot.chat(message);
-    // Emitir a mensagem para o chat do site (mostrando a mensagem enviada)
-    io.emit('chat', { username: 'Você', message });
+    // Emitir a mensagem para o chat do site (mostrando a mensagem enviada, sem o "Você")
+    io.emit('chat', { username: 'Serjao', message });
   });
 
   socket.on('disconnect', () => {
