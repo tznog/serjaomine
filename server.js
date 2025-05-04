@@ -27,14 +27,14 @@ const bot = mineflayer.createBot({
   password: '12345678',
 });
 
-// Login automático ao entrar
+// Login e mensagem de entrada
 bot.once('spawn', () => {
   console.log('Bot Serjao conectado com sucesso!');
   bot.chat('/login 12345678');
   bot.chat('§7[§aBot§7] §fSerjão entrou no servidor!');
 });
 
-// Captura de mensagens de jogadores
+// Apenas mensagens reais do chat (não sistema)
 bot.on('chat', (username, message) => {
   if (username !== bot.username) {
     io.emit('chat', { username, message });
@@ -42,22 +42,14 @@ bot.on('chat', (username, message) => {
   }
 });
 
-// Captura de mensagens do sistema/servidor
-bot.on('message', (jsonMsg) => {
-  const message = jsonMsg.toString().replace(/\n/g, ' ').trim();
-  if (message && !message.includes('Serjao')) {
-    io.emit('chat', { username: 'Servidor', message });
-    console.log(`[Servidor]: ${message}`);
-  }
-});
-
-// Mensagens do site para o jogo
+// Recebe mensagens do site e envia para o servidor
 io.on('connection', (socket) => {
   socket.on('send-message', (msg) => {
     if (msg && msg.trim() !== '') {
-      bot.chat(msg.trim());
-      // Enviar só uma vez com nome do bot
-      io.emit('chat', { username: 'Serjao', message: msg.trim() });
+      const cleanMsg = msg.trim();
+      bot.chat(cleanMsg);
+      io.emit('chat', { username: 'Serjao', message: cleanMsg });
+      console.log(`Serjao: ${cleanMsg}`);
     }
   });
 });
