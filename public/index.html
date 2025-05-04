@@ -1,63 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Serjão</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="/socket.io/socket.io.js"></script>
-</head>
-<body class="dark-theme">
-    <div class="container">
-        <h1>Chat de Controle do Serjão</h1>
-        
-        <!-- Chat Section -->
-        <div class="chat-box">
-            <div id="chatOutput" class="output"></div>
-            <input type="text" id="chatInput" placeholder="Digite uma mensagem" />
-            <button onclick="sendMessage()">Enviar</button>
-        </div>
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const mineflayer = require('mineflayer');
+const pathfinder = require('mineflayer-pathfinder').pathfinder;
+const { GoalBlock } = require('mineflayer-pathfinder').goals;
+const path = require('path');
 
-        <!-- Command Section -->
-        <div class="command-box">
-            <div id="commandOutput" class="output"></div>
-            <input type="text" id="commandInput" placeholder="Digite um comando para o bot" />
-            <button onclick="sendCommand()">Executar Comando</button>
-        </div>
-    </div>
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
-    <script>
-        var socket = io();
+let bot;
 
-        // Função para enviar mensagens do chat
-        function sendMessage() {
-            var message = document.getElementById('chatInput').value;
-            if (message) {
-                socket.emit('chatMessage', message);
-                document.getElementById('chatInput').value = '';
-            }
-        }
+// Coordenadas para onde o bot deve retornar após acordar
+const homeCoordinates = { x: 100, y: 65, z: 100 };
 
-        // Função para enviar comandos do bot
-        function sendCommand() {
-            var command = document.getElementById('commandInput').value;
-            if (command) {
-                socket.emit('botCommand', command);
-                document.getElementById('commandInput').value = '';
-            }
-        }
+// Criar o bot
+function createBot() {
+  bot = mineflayer.createBot({
+    host: 'survival.406rec.com',
+    port: 25565,
+    username: 'Serjao',
+    version: '1.21.4',
+  });
 
-        // Recebe mensagens do chat
-        socket.on('chatMessage', function(message) {
-            var chatOutput = document.getElementById('chatOutput');
-            chatOutput.innerHTML += `<p>${message}</p>`;
-        });
+  bot.loadPlugin(pathfinder);
 
-        // Recebe respostas dos comandos
-        socket.on('botCommandResponse', function(response) {
-            var commandOutput = document.getElementById('commandOutput');
-            commandOutput.innerHTML += `<p>${response}</p>`;
-        });
-    </script>
-</body>
-</html>
+  bot.once('spawn', () => {
+    io.emit('chatMessage', '🤖 Bot entrou no servidor!');
+    
+    // Login automático
+    setTimeout(() => {
+      bot.chat('/login 12345678');
+    }, 500);
+  });
+
+  bot.on('chat', (username, message) => {
+    if (username !== bot.username) {
+      io.emit('chatMessage', `<${username}> ${message}`);
+    }
+  });
+
+  bot.on('message', jsonMsg => {
+    io.emit('chatMessage', jsonMsg.toString());
+  });
+
+  bot.on('error', err => {
+    console.log('❌ Erro:', err);
+    io.emit('chatMessage', '❌ Bot encontrou um erro.');
+  });
+
+  bot.on('end', () => {
+    io.emit('chatMessage', '🔌 Bot desconectado. Tentando reconectar...');
+    setTimeout(createBot, 5000);
+  });
+}
+
+// Comando: dormir
+async function botSleep() {
+  const bed = bot.findBlock({
+    matching: block => bot.isABed(block),
+    maxDistance: 6,
+  });
+
+  if (!bed) return io.emit('botCommandResponse', '🛏️ Nenhuma cama encontrada por perto.');
+
+  try {
+    await bot.sleep(bed);
+    bot.chat('😴 Indo dormir...');
+    io.emit('botCommandResponse', '✅ Bot foi dormir!');
+  } catch (err) {
+    io.emit('botCommandResponse', '❌ Erro ao dormir: ' + err.message);
+  }
+}
+
+// Comando: acordar e ir até as coordenadas
+async function botWakeUp() {
+  if (!bot.isSleeping) {
+    return io.emit('botCommandResponse', '😴 Bot já está acordado.');
+  }
+
+  try {
+    await bot.wake();
+    bot.chat('☀️ Acordei! Voltando pra casa...');
+    bot.pathfinder.setGoal(new GoalBlock(homeCoordinates.x, homeCoordinates.y, homeCoordinates.z));
+    io.emit('botCommandResponse', '✅ Bot acordou e está indo para as coordenadas.');
+  } catch (err) {
+    io.emit('botCommandResponse', '❌ Erro ao acordar: ' + err.message);
+  }
+}
+
+// Servir arquivos do front-end
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Sockets
+io.on('connection', (socket) => {
+  console.log('🧑 Novo usuário conectado');
+
+  socket.on('chatMessage', msg => {
+    if (bot) bot.chat(msg);
+  });
+
+  socket.on('botCommand', cmd => {
+    switch (cmd.toLowerCase()) {
+      case 'dormir':
+        botSleep();
+        break;
+      case 'acordar':
+        botWakeUp();
+        break;
+      default:
+        io.emit('botCommandResponse', `❓ Comando desconhecido: ${cmd}`);
+    }
+  });
+});
+
+// Iniciar servidor e bot
+createBot();
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🌐 Servidor rodando na porta ${PORT}`);
+});
